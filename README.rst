@@ -1,3 +1,35 @@
+About GIT-SOPS
+==============
+
+**git-sops** is a derivative of SOPS_ adapted for a different workflow.
+
+.. _SOPS: https://github.com/mozilla/sops
+
+With *sops* files are always kept encypted on disk, decrypted only in memory
+while edited.
+With *git-sops* files are kept decrypted in worktree but encrypted
+in other GIT places:
+
+- git index
+- commit blobs
+- on remote git server when branch is pushed or pulled.
+
+*git-sops* derives encryption key from same named file in index,
+renamed files are not detected yet.
+
+Additionally git-sops tries to keep such original formatting features as:
+
+- single/double string quotes,
+- inline comments,
+- indentation of multi-line strings
+- yaml stream markers
+- etc.
+
+Getting started with GIT-SOPS
+-----------------------------
+
+TODO
+
 SOPS: Secrets OPerationS
 ========================
 

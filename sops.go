@@ -55,6 +55,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var EncryptedCommentSuffix = "__encrypted_comment_suffix"
+
 // DefaultUnencryptedSuffix is the default suffix a TreeItem key has to end with for sops to leave its Value unencrypted
 const DefaultUnencryptedSuffix = "_unencrypted"
 
@@ -298,15 +300,18 @@ func (tree Tree) Encrypt(key []byte, cipher Cipher) (string, error) {
 	hash := sha512.New()
 	walk := func(branch TreeBranch) error {
 		_, err := branch.walkBranch(branch, make([]string, 0), func(in interface{}, path []string) (interface{}, error) {
-			// Only add to MAC if not a comment
-			if _, ok := in.(Comment); !ok {
+			// Only add to MAC if not a comment or encrypted comment
+			encrypted := true
+			if c, ok := in.(Comment); ok {
+				encrypted = strings.HasSuffix(c.Value, EncryptedCommentSuffix)
+			}
+			if encrypted {
 				bytes, err := ToBytes(in)
 				if err != nil {
 					return nil, fmt.Errorf("Could not convert %s to bytes: %s", in, err)
 				}
 				hash.Write(bytes)
 			}
-			encrypted := true
 			if tree.Metadata.UnencryptedSuffix != "" {
 				for _, v := range path {
 					if strings.HasSuffix(v, tree.Metadata.UnencryptedSuffix) {
@@ -422,6 +427,10 @@ func (tree Tree) Decrypt(key []byte, cipher Cipher) (string, error) {
 				pathString := strings.Join(path, ":") + ":"
 				if c, ok := in.(Comment); ok {
 					v, err = cipher.Decrypt(c.Value, key, pathString)
+					if err != nil && !strings.HasSuffix(c.Value, EncryptedCommentSuffix) {
+						err = nil
+						v = c
+					}
 					if err != nil {
 						// Assume the comment was not encrypted in the first place
 						log.WithField("comment", c.Value).
@@ -440,8 +449,8 @@ func (tree Tree) Decrypt(key []byte, cipher Cipher) (string, error) {
 			} else {
 				v = in
 			}
-			// Only add to MAC if not a comment
-			if _, ok := v.(Comment); !ok {
+			// Only add to MAC if not a comment or encrypted comment
+			if c, ok := v.(Comment); !ok || strings.HasSuffix(c.Value, EncryptedCommentSuffix) {
 				bytes, err := ToBytes(v)
 				if err != nil {
 					return nil, fmt.Errorf("Could not convert %s to bytes: %s", in, err)
