@@ -109,6 +109,8 @@ type EncryptTreeOpts struct {
 	Cipher sops.Cipher
 	// DataKey is the key the cipher should use to encrypt the values inside the tree
 	DataKey []byte
+	// LastModified time specified by user
+	LastModified time.Time
 }
 
 // EncryptTree encrypts the tree passed in through the EncryptTreeOpts
@@ -118,6 +120,9 @@ func EncryptTree(opts EncryptTreeOpts) error {
 		return NewExitError(fmt.Sprintf("Error encrypting tree: %s", err), codes.ErrorEncryptingTree)
 	}
 	opts.Tree.Metadata.LastModified = time.Now().UTC()
+	if !opts.LastModified.IsZero() {
+		opts.Tree.Metadata.LastModified = opts.LastModified
+	}
 	opts.Tree.Metadata.MessageAuthenticationCode, err = opts.Cipher.Encrypt(unencryptedMac, opts.DataKey, opts.Tree.Metadata.LastModified.Format(time.RFC3339))
 	if err != nil {
 		return NewExitError(fmt.Sprintf("Could not encrypt MAC: %s", err), codes.ErrorEncryptingMac)

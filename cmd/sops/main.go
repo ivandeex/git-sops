@@ -28,6 +28,7 @@ import (
 	"go.mozilla.org/sops/v3/cmd/sops/subcommand/updatekeys"
 	"go.mozilla.org/sops/v3/config"
 	"go.mozilla.org/sops/v3/gcpkms"
+	"go.mozilla.org/sops/v3/git"
 	"go.mozilla.org/sops/v3/hcvault"
 	"go.mozilla.org/sops/v3/keys"
 	"go.mozilla.org/sops/v3/keyservice"
@@ -697,6 +698,8 @@ func main() {
 			Usage: "Save the output after encryption or decryption to the file specified",
 		},
 	}, keyserviceFlags...)
+
+	app.Commands = append(app.Commands, git.Commands()...)
 
 	app.Action = func(c *cli.Context) error {
 		if c.Bool("verbose") {

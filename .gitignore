@@ -3,3 +3,5 @@ Cargo.lock
 vendor/
 coverage.txt
 profile.out
+/git-sops*
+/tmppkg

@@ -11,6 +11,8 @@ import (
 	"go.mozilla.org/sops/v3/stores"
 )
 
+var Indent = 4
+
 // Store handles storage of YAML data
 type Store struct {
 }
@@ -319,7 +321,7 @@ func (store *Store) LoadPlainFile(in []byte) (sops.TreeBranches, error) {
 func (store *Store) EmitEncryptedFile(in sops.Tree) ([]byte, error) {
     var b bytes.Buffer
 	e := yaml.NewEncoder(io.Writer(&b))
-	e.SetIndent(4)
+	e.SetIndent(Indent)
 	for _, branch := range in.Branches {
 		// Document root
 		var doc = yaml.Node{}
@@ -351,7 +353,7 @@ func (store *Store) EmitEncryptedFile(in sops.Tree) ([]byte, error) {
 func (store *Store) EmitPlainFile(branches sops.TreeBranches) ([]byte, error) {
     var b bytes.Buffer
 	e := yaml.NewEncoder(io.Writer(&b))
-	e.SetIndent(4)
+	e.SetIndent(Indent)
 	for _, branch := range branches {
 		// Document root
 		var doc = yaml.Node{}
