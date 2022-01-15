@@ -1,10 +1,19 @@
-package git
+package mangle
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 )
+
+type Options struct {
+	encryptedCommentPrefix string
+	encryptedCommentSuffix string
+	flags                  map[string]bool
+}
+
+const MangleAll = "anchor,astr,bare,blank,incom,inval,pipe,qstr,stream,tilde,znum"
+const allMangleKeys = `-_:~"'0@#*|`
 
 var mangleKeyToOpt = map[string]string{
 	"-": "stream",
@@ -46,15 +55,19 @@ var mangleOptToKey = map[string]string{
 	"multiline-pipe": "|",
 }
 
-func newMangleOpts(value string) (mangleOpts, error) {
-	mo := mangleOpts{}
-	switch value {
+func NewOptions(commentPrefix, commentSuffix, flagString string) (*Options, error) {
+	mo := &Options{
+		encryptedCommentPrefix: commentPrefix,
+		encryptedCommentSuffix: commentSuffix,
+		flags:                  map[string]bool{},
+	}
+	switch flagString {
 	case "all", "true":
-		value = mangleAll
+		flagString = MangleAll
 	case "none", "false", "":
 		return mo, nil
 	}
-	for _, opt := range strings.Split(value, ",") {
+	for _, opt := range strings.Split(flagString, ",") {
 		opt = strings.TrimSpace(opt)
 		key := strings.TrimRight(opt, "s") // handle plurals
 		if len(key) > 1 {
@@ -63,22 +76,22 @@ func newMangleOpts(value string) (mangleOpts, error) {
 		if key == "" || !strings.Contains(allMangleKeys, key) {
 			return nil, fmt.Errorf("invalid styling option %q", opt)
 		}
-		mo[key] = true
+		mo.flags[key] = true
 	}
 	return mo, nil
 }
 
-func (mo mangleOpts) isNone() bool {
-	return mo == nil || len(mo) == 0
+func (mo *Options) isNone() bool {
+	return mo == nil || mo.flags == nil || len(mo.flags) == 0
 }
 
-func (mo mangleOpts) String() string {
+func (mo *Options) FlagString() string {
 	if mo.isNone() {
 		return "false"
 	}
 
 	options := []string{}
-	for key, flag := range mo {
+	for key, flag := range mo.flags {
 		if !flag {
 			continue
 		}
@@ -92,22 +105,10 @@ func (mo mangleOpts) String() string {
 
 	value := strings.Join(options, ",")
 	switch value {
-	case mangleAll:
+	case MangleAll:
 		value = "true"
 	case "":
 		value = "false"
 	}
 	return value
-}
-
-func (a *action) getMangleOpts(param string, useGit bool) (mangleOpts, error) {
-	value := a.c.String(param)
-	if value == "" && useGit {
-		var err error
-		value, err = a.configGet("", "sops."+param)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return newMangleOpts(value)
 }

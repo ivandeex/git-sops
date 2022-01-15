@@ -5,6 +5,7 @@ import (
 
 	"go.mozilla.org/sops/v3/cmd/sops/codes"
 	"go.mozilla.org/sops/v3/cmd/sops/common"
+	"go.mozilla.org/sops/v3/mangle"
 	"go.mozilla.org/sops/v3/version"
 
 	"gopkg.in/urfave/cli.v1"
@@ -63,7 +64,7 @@ func Commands() []cli.Command {
 		},
 		cli.StringFlag{
 			Name:   "keep-formatting",
-			Usage:  "Keep YAML formatting: " + mangleAll,
+			Usage:  "Keep YAML formatting: " + mangle.MangleAll,
 			EnvVar: "SOPS_KEEP_FORMATTING",
 		},
 		cli.BoolFlag{

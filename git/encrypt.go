@@ -65,7 +65,6 @@ func (t *transformer) encryptFile(path string, input []byte) ([]byte, error) {
 }
 
 func (a *action) sopsEncrypt(opts *options) ([]byte, error) {
-	opts.encrypting = true
 	// load the file
 	path, err := filepath.Abs(opts.inputPath)
 	if err != nil {
@@ -79,7 +78,7 @@ func (a *action) sopsEncrypt(opts *options) ([]byte, error) {
 		}
 		inputData = fileBytes
 	}
-	inputData = a.yamlMangle(inputData, opts)
+	inputData = opts.mangling.Mangle(inputData, path, true)
 	branches, err := opts.inputStore.LoadPlainFile(inputData)
 	if err != nil {
 		return nil, err
@@ -128,7 +127,7 @@ func (a *action) sopsEncrypt(opts *options) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	output = a.yamlDemangle(output, opts)
+	output = opts.mangling.Demangle(output, path, true)
 	return output, nil
 }
 
@@ -148,7 +147,6 @@ func (t *transformer) decryptFile(path string, input []byte) ([]byte, error) {
 }
 
 func (a *action) sopsDecrypt(opts *options) ([]byte, error) {
-	opts.encrypting = false
 	loadOpts := common.GenericDecryptOpts{
 		Cipher:      opts.cipher,
 		InputStore:  opts.inputStore,
@@ -156,7 +154,7 @@ func (a *action) sopsDecrypt(opts *options) ([]byte, error) {
 		IgnoreMAC:   opts.ignoreMac,
 		KeyServices: opts.keyServices,
 	}
-	inputData := a.yamlMangle(opts.inputData, opts)
+	inputData := opts.mangling.Mangle(opts.inputData, opts.inputPath, false)
 	tree, err := loadEncryptedFileDataWithBugFixes(loadOpts, inputData)
 	if err != nil {
 		return nil, err
@@ -180,7 +178,7 @@ func (a *action) sopsDecrypt(opts *options) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	output = a.yamlDemangle(output, opts)
+	output = opts.mangling.Demangle(output, opts.inputPath, false)
 	return output, nil
 }
 

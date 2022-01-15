@@ -1,4 +1,4 @@
-package git
+package mangle
 
 import (
 	"regexp"
@@ -6,10 +6,13 @@ import (
 	"strings"
 )
 
+// MangleComment is a suffix for comments to encrypt in SOPS proper
+const MangleComment = "∉∌"
+
 var reInComment = regexp.MustCompile(patKeyItem + `(.*\s)(#.*)$`)
 
 func (ym *mangler) splitInlineComments() {
-	encrypting := ym.opts.encrypting
+	encrypting := ym.encrypting
 	newLines := make([]string, 0, len(ym.lines))
 	newIndent := make([]int, 0, len(ym.indent))
 	for i, s := range ym.lines {
@@ -27,7 +30,7 @@ func (ym *mangler) splitInlineComments() {
 				pos := strconv.Itoa(len(s) - len(com)) // save position
 				c := ym.padding(i) + com + mangleStart + pos + mangleEnd
 				if encrypting {
-					c += mangleComment
+					c += MangleComment
 				}
 				s = key + " " + strings.TrimRight(val, " \t")
 				newLines = append(newLines, c, s)
@@ -44,7 +47,7 @@ func (ym *mangler) splitInlineComments() {
 
 func (ym *mangler) mergeInlineComments() {
 	// ym.trace("merging")
-	decrypting := !ym.opts.encrypting
+	decrypting := !ym.encrypting
 	n := len(ym.lines)
 	newLines := make([]string, n)
 	for i, s := range ym.lines {
@@ -54,7 +57,7 @@ func (ym *mangler) mergeInlineComments() {
 			continue
 		}
 		if decrypting {
-			s = strings.TrimSuffix(s, mangleComment)
+			s = strings.TrimSuffix(s, MangleComment)
 		}
 		if !strings.HasSuffix(s, mangleEnd) {
 			continue
@@ -94,7 +97,7 @@ func (ym *mangler) mergeInlineComments() {
 var reComment = regexp.MustCompile(`^(\s*#)(.*)$`)
 
 func (ym *mangler) markEncryptedComments() {
-	if !ym.opts.encrypting {
+	if !ym.encrypting {
 		return
 	}
 
@@ -119,7 +122,7 @@ func (ym *mangler) markEncryptedComments() {
 		if value == "" {
 			continue
 		}
-		if strings.HasSuffix(value, mangleComment) {
+		if strings.HasSuffix(value, MangleComment) {
 			continue // prevent double-mangling
 		}
 		encrypt := all
@@ -140,7 +143,7 @@ func (ym *mangler) markEncryptedComments() {
 			}
 		}
 		if encrypt {
-			ym.lines[i] = s + mangleComment
+			ym.lines[i] = s + MangleComment
 		}
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"go.mozilla.org/sops/v3/cmd/sops/common"
 	"go.mozilla.org/sops/v3/keys"
 	"go.mozilla.org/sops/v3/keyservice"
+	"go.mozilla.org/sops/v3/mangle"
 	"go.mozilla.org/sops/v3/version"
 )
 
@@ -29,7 +30,8 @@ type options struct {
 	indent         int
 	fileModtime    bool
 	// encrypt-only options
-	meta              sops.Metadata
+	meta sops.Metadata
+	// key filters (encrypt-only)
 	unencryptedSuffix string
 	encryptedSuffix   string
 	unencryptedRegex  string
@@ -37,12 +39,11 @@ type options struct {
 	// decrypt-only options
 	ignoreMac bool
 	// mangling options
-	encrypting bool
-	mangleOpts mangleOpts
 	renameKeys replace
+	mangling   *mangle.Options
 	// comment options
-	encryptedCommentSuffix string
 	encryptedCommentPrefix string
+	encryptedCommentSuffix string
 }
 
 const optUseGit = true
@@ -78,7 +79,6 @@ func (o *options) forPath(path string) *options {
 		o.meta.LastModified = zeroTime
 		return o
 	}
-	//log.Debugf("lastmodified %s: %v", path, fi.ModTime().UTC())
 	o.meta.LastModified = fi.ModTime().UTC()
 	return o
 }
@@ -104,10 +104,15 @@ func (a *action) getOptions() (*options, error) {
 	if err != nil {
 		return nil, err
 	}
-	mangleOpts, err := a.getMangleOpts("keep-formatting", optUseGit)
+
+	commentPrefix := a.getString("encrypted-comment-prefix", optUseGit)
+	commentSuffix := a.getString("encrypted-comment-suffix", optUseGit)
+	flagString := a.getString("keep-formatting", optUseGit)
+	mangleOpts, err := mangle.NewOptions(commentPrefix, commentSuffix, flagString)
 	if err != nil {
 		return nil, err
 	}
+
 	renameKeys, err := a.getRenameKeys("rename-keys", optUseGit)
 	if err != nil {
 		return nil, err
@@ -115,7 +120,7 @@ func (a *action) getOptions() (*options, error) {
 
 	o := &options{
 		a: a,
-		// filters
+		// key filters
 		unencryptedSuffix: a.getString("unencrypted-suffix", optUseGit),
 		encryptedSuffix:   a.getString("encrypted-suffix", optUseGit),
 		unencryptedRegex:  a.getString("unencrypted-regex", optUseGit),
@@ -130,11 +135,10 @@ func (a *action) getOptions() (*options, error) {
 		ignoreMac:      ignoreMac,
 		fileModtime:    fileModtime,
 		// mangling
-		mangleOpts: mangleOpts,
-		renameKeys: renameKeys,
-		// comments
-		encryptedCommentSuffix: a.getString("encrypted-comment-suffix", optUseGit),
-		encryptedCommentPrefix: a.getString("encrypted-comment-prefix", optUseGit),
+		mangling:               mangleOpts,
+		renameKeys:             renameKeys,
+		encryptedCommentPrefix: commentPrefix,
+		encryptedCommentSuffix: commentSuffix,
 	}
 	o.meta = sops.Metadata{
 		KeyGroups:         o.keyGroups,
@@ -165,7 +169,7 @@ func (o *options) save() (err error) {
 	if err = a.setInt("indent", o.indent); err != nil {
 		return
 	}
-	if err = a.setString("keep-formatting", o.mangleOpts.String()); err != nil {
+	if err = a.setString("keep-formatting", o.mangling.FlagString()); err != nil {
 		return
 	}
 	if err = a.setString("rename-keys", o.renameKeys.String()); err != nil {

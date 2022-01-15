@@ -1,10 +1,12 @@
-package git
+package mangle
 
 import (
 	"regexp"
 	"strconv"
 	"strings"
 )
+
+var Indent = 2
 
 var (
 	rePipeStart = regexp.MustCompile(patKeyItem + `"{{.*[^"]$`)
@@ -13,7 +15,7 @@ var (
 )
 
 func (ym *mangler) mergeMultilinePipes() {
-	encrypting := ym.opts.encrypting
+	encrypting := ym.encrypting
 	newLines := make([]string, 0, len(ym.lines))
 	newIndent := make([]int, 0, len(ym.indent))
 	s := ym.lines
@@ -40,7 +42,7 @@ func (ym *mangler) mergeMultilinePipes() {
 				}
 				comment += mangleEnd
 				if encrypting {
-					comment += mangleComment
+					comment += MangleComment
 				}
 				newLines = append(newLines, comment, merged)
 				newIndent = append(newIndent, p[i], p[i])
@@ -56,7 +58,7 @@ func (ym *mangler) mergeMultilinePipes() {
 }
 
 func (ym *mangler) restoreMultilinePipes() {
-	decrypting := !ym.opts.encrypting
+	decrypting := !ym.encrypting
 	lines := ym.lines
 	n := len(lines)
 	for i, s := range lines {
@@ -65,7 +67,7 @@ func (ym *mangler) restoreMultilinePipes() {
 			continue
 		}
 		if decrypting {
-			s = strings.TrimSuffix(s, mangleComment)
+			s = strings.TrimSuffix(s, MangleComment)
 		}
 		m := rePipeMark.FindStringSubmatch(s)
 		if m == nil {
@@ -105,7 +107,7 @@ func (ym *mangler) restoreMultilinePipes() {
 		}
 		for _, p := range indents {
 			if p <= baseIndent {
-				p = baseIndent + defaultIndent
+				p = baseIndent + Indent
 			}
 			s = strings.Replace(s, mangleNewLine, "\n"+strings.Repeat(" ", p), 1)
 		}
