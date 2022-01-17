@@ -120,7 +120,7 @@ func (a *action) setupRepo(force bool, probeFile, probeText string) error {
 		return err
 	}
 
-	if err = os.Chmod(a.dotGit("config"), 0600); err != nil {
+	if err = os.Chmod(a.dotGit("config"), permSecret); err != nil {
 		return err
 	}
 

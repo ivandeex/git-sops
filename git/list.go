@@ -41,12 +41,7 @@ func (a *action) chmodFiles(files []string) error {
 	}
 	for _, path := range files {
 		path = a.toAbsPath(path)
-		fi, err := os.Stat(path)
-		if err != nil {
-			return err
-		}
-		mode := fi.Mode() & 0770 // disable "other" access
-		if err = os.Chmod(path, mode); err != nil {
+		if err = os.Chmod(path, permSecret); err != nil {
 			return err
 		}
 	}
@@ -77,7 +72,7 @@ func (a *action) smudgeFiles(files []string) error {
 			err = os.Remove(path)
 		}
 		if err == nil {
-			err = ioutil.WriteFile(path, output, 0644) // FIXME 0640
+			err = ioutil.WriteFile(path, output, permSecret)
 		}
 		if err != nil {
 			return err
