@@ -17,6 +17,8 @@ import (
 	"go.mozilla.org/sops/v3/cmd/sops/common"
 )
 
+const permSecret = 0600
+
 var errInvalidAgeRecs = errors.New("invalid or absent encryption password")
 
 func getInput(path string, stdin bool) (data []byte, err error) {
